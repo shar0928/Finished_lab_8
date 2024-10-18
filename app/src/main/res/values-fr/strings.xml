@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Application de tâches</string>
+    <string name="add_button">Ajouter</string>
+    <string name="type_here">Tapez ici</string>
+    <string name="urgent">Urgent</string>
+    <string name="delete_title">Supprimer?</string>
+    <string name="delete_message">Voulez-vous supprimer cela? La ligne sélectionnée est: %1$d</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+</resources>
