@@ -1,5 +1,8 @@
 package com.example.androidlabs;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,55 +11,58 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat; // Use ContextCompat for getColor()
-import androidx.appcompat.widget.SwitchCompat; // Use SwitchCompat from AppCompat
-
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.widget.SwitchCompat;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private List<ToDoItem> toDoList;  // List to hold To-Do items
-    private BaseAdapter adapter;      // Adapter to manage the ListView
-    private EditText inputText;       // EditText for user input
-    private SwitchCompat urgentSwitch; // SwitchCompat from AppCompat for compatibility
+    private List<ToDoItem> toDoList;
+    private BaseAdapter adapter;
+    private EditText inputText;
+    private SwitchCompat urgentSwitch;
+    private TodoDatabaseHelper dbHelper;  // SQLite Database Helper
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Initialize the database helper
+        dbHelper = new TodoDatabaseHelper(this);
+
         // Set up UI elements
         inputText = findViewById(R.id.editText);
         urgentSwitch = findViewById(R.id.urgentSwitch);
         ListView listView = findViewById(R.id.listView);
 
-        // Initialize the list to hold To-Do items
+        // Initialize the list and load from the database
         toDoList = new ArrayList<>();
+        loadTodosFromDatabase();  // Load saved todos
 
-        // Set up the adapter to manage the ListView
+        // Set up the adapter
         adapter = new ToDoAdapter();
         listView.setAdapter(adapter);
 
         // Handle the "Add" button click
         Button addButton = findViewById(R.id.addButton);
-        addButton.setText(R.string.add_button); // Set button text from resources
+        addButton.setText(R.string.add_button);
         addButton.setOnClickListener(v -> {
-            String text = inputText.getText().toString(); // Get text from EditText
-            boolean isUrgent = urgentSwitch.isChecked();  // Check if urgent switch is on
+            String text = inputText.getText().toString();
+            boolean isUrgent = urgentSwitch.isChecked();
 
-            // Only add the item if text is not empty
             if (!text.isEmpty()) {
-                // Create a new ToDoItem and add it to the list
-                toDoList.add(new ToDoItem(text, isUrgent));
+                // Add the new todo to the database
+                addTodoToDatabase(text, isUrgent);
 
-                // Notify the adapter to refresh the ListView
+                // Reload todos from the database after adding
+                loadTodosFromDatabase();
                 adapter.notifyDataSetChanged();
 
-                // Clear the EditText for new input
+                // Clear the EditText
                 inputText.setText("");
             }
         });
@@ -67,53 +73,90 @@ public class MainActivity extends AppCompatActivity {
                     .setTitle(R.string.delete_title)
                     .setMessage(getString(R.string.delete_message, position))
                     .setPositiveButton(R.string.yes, (dialog, which) -> {
-                        // Delete the item at the selected position
-                        toDoList.remove(position);
-                        adapter.notifyDataSetChanged(); // Refresh the list
+                        // Remove from the database
+                        deleteTodoFromDatabase(position);
+
+                        // Reload todos from the database after deletion
+                        loadTodosFromDatabase();
+                        adapter.notifyDataSetChanged();
                     })
-                    .setNegativeButton(R.string.no, null) // No action on "No"
-                    .show(); // Show the AlertDialog
-            return true; // Indicates the long click was handled
+                    .setNegativeButton(R.string.no, null)
+                    .show();
+            return true;
         });
     }
 
-    // Inner class for the Adapter
+    // Load todos from the SQLite database
+    private void loadTodosFromDatabase() {
+        toDoList.clear();  // Clear the existing list
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(TodoDatabaseHelper.TABLE_NAME, null, null, null, null, null, null);
+
+        while (cursor.moveToNext()) {
+            String todoText = cursor.getString(cursor.getColumnIndexOrThrow(TodoDatabaseHelper.COLUMN_TODO));
+            int urgency = cursor.getInt(cursor.getColumnIndexOrThrow(TodoDatabaseHelper.COLUMN_URGENCY));
+            boolean isUrgent = urgency == 1;
+            toDoList.add(new ToDoItem(todoText, isUrgent));
+        }
+
+        cursor.close();
+        db.close();
+    }
+
+    // Add a new todo item to the database
+    private void addTodoToDatabase(String todoText, boolean isUrgent) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(TodoDatabaseHelper.COLUMN_TODO, todoText);
+        values.put(TodoDatabaseHelper.COLUMN_URGENCY, isUrgent ? 1 : 0);
+
+        db.insert(TodoDatabaseHelper.TABLE_NAME, null, values);
+        db.close();
+    }
+
+    // Delete a todo item from the database
+    private void deleteTodoFromDatabase(int position) {
+        ToDoItem item = toDoList.get(position);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        db.delete(TodoDatabaseHelper.TABLE_NAME, TodoDatabaseHelper.COLUMN_TODO + " = ?", new String[]{item.getText()});
+        db.close();
+    }
+
+    // Adapter for displaying the list of ToDo items
     private class ToDoAdapter extends BaseAdapter {
         @Override
         public int getCount() {
-            return toDoList.size(); // Return the number of items in the list
+            return toDoList.size();
         }
 
         @Override
         public Object getItem(int position) {
-            return toDoList.get(position); // Return the ToDo item at this position
+            return toDoList.get(position);
         }
 
         @Override
         public long getItemId(int position) {
-            return position; // Return the position as the ID
+            return position;
         }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            // Use the ViewHolder pattern to improve performance
             ViewHolder holder;
 
-            // Check if the existing view is being reused, otherwise inflate the view
             if (convertView == null) {
                 convertView = getLayoutInflater().inflate(R.layout.todo_item, parent, false);
                 holder = new ViewHolder();
                 holder.textView = convertView.findViewById(R.id.textView);
-                convertView.setTag(holder); // Store the view holder with the view
+                convertView.setTag(holder);
             } else {
-                holder = (ViewHolder) convertView.getTag(); // Retrieve the view holder
+                holder = (ViewHolder) convertView.getTag();
             }
 
-            // Get the ToDoItem for the current position
             ToDoItem item = toDoList.get(position);
-            holder.textView.setText(item.getText()); // Set the text for the TextView
+            holder.textView.setText(item.getText());
 
-            // Change the background and text color based on urgency using ContextCompat
             if (item.isUrgent()) {
                 convertView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.holo_red_dark));
                 holder.textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
@@ -122,12 +165,11 @@ public class MainActivity extends AppCompatActivity {
                 holder.textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
             }
 
-            return convertView; // Return the completed view to render on screen
+            return convertView;
         }
 
-        // ViewHolder pattern to hold view references
         private class ViewHolder {
-            TextView textView; // Reference to the TextView for the ToDo item
+            TextView textView;
         }
     }
 }
