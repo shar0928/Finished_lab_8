@@ -1,24 +1,19 @@
 package com.example.androidlabs;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
@@ -26,92 +21,97 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ImageView catImageView;
-    private ProgressBar progressBar;
     private static final String TAG = "MainActivity";
+    private ListView listView;
+    private JSONArray characters;
+    private boolean isTablet;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Check if we're using the tablet layout (presence of frameLayout)
+        isTablet = findViewById(R.id.frameLayout) != null;
+
         setContentView(R.layout.activity_main);
+        listView = findViewById(R.id.listView);
+        fetchData();
 
-        catImageView = findViewById(R.id.catImageView);
-        progressBar = findViewById(R.id.progressBar);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            try {
+                JSONObject character = characters.getJSONObject(position);
+                String name = character.getString("name");
+                String height = character.getString("height");
+                String mass = character.getString("mass");
 
-        // Using ExecutorService instead of AsyncTask
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        executorService.execute(new CatImages(this));
+                if (isTablet) { // Tablet mode
+                    // Use FragmentManager to display DetailsFragment in the frameLayout on tablets
+                    DetailsFragment fragment = new DetailsFragment();
+                    Bundle bundle = new Bundle();
+                    bundle.putString("name", name);
+                    bundle.putString("height", height);
+                    bundle.putString("mass", mass);
+                    fragment.setArguments(bundle);
+
+                    FragmentManager fragmentManager = getSupportFragmentManager();
+                    fragmentManager.beginTransaction()
+                            .replace(R.id.frameLayout, fragment)
+                            .commit();
+                } else { // Phone mode
+                    // Start DetailsActivity to show the details on phones
+                    Intent intent = new Intent(MainActivity.this, DetailsActivity.class);
+                    intent.putExtra("name", name);
+                    intent.putExtra("height", height);
+                    intent.putExtra("mass", mass);
+                    startActivity(intent);
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Error selecting character", e);
+                Toast.makeText(MainActivity.this, "Error selecting character", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private static class CatImages implements Runnable {
-        private final WeakReference<MainActivity> activityReference;
-        private Bitmap bitmap;
-
-        // Constructor to pass a reference to MainActivity
-        public CatImages(MainActivity activity) {
-            activityReference = new WeakReference<>(activity);
-        }
-
-        @Override
-        public void run() {
-            MainActivity activity = activityReference.get();
-            if (activity == null || activity.isFinishing()) return;
-
-            try {
-                // Get the cat image JSON URL
-                JSONObject jsonObject = fetchCatImageJson();
-                String imageUrl = "https://cataas.com" + jsonObject.getString("url");
-
-                // Check if the image exists locally
-                String fileName = jsonObject.getString("id") + ".png";
-                File file = new File(activity.getApplicationContext().getFilesDir(), fileName);
-
-                if (file.exists()) {
-                    bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
-                } else {
-                    // Download the image
-                    URL imageURL = new URL(imageUrl);
-                    HttpURLConnection imageConnection = (HttpURLConnection) imageURL.openConnection();
-                    bitmap = BitmapFactory.decodeStream(imageConnection.getInputStream());
-
-                    // Save the image locally
-                    FileOutputStream outputStream = new FileOutputStream(file);
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
-                    outputStream.close();
+    private void fetchData() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            JSONObject jsonResponse = fetchJsonData();
+            if (jsonResponse != null) {
+                try {
+                    characters = jsonResponse.getJSONArray("results");
+                    runOnUiThread(() -> populateListView(characters));
+                } catch (JSONException e) {
+                    Log.e(TAG, "JSON Parsing error", e);
                 }
-
-                // Simulate progress
-                for (int i = 0; i < 100; i++) {
-                    int finalI = i;
-                    new Handler(Looper.getMainLooper()).post(() -> activity.progressBar.setProgress(finalI));
-                    Thread.sleep(30);
-                }
-
-                // Update UI with the downloaded image
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    if (bitmap != null) {
-                        activity.catImageView.setImageBitmap(bitmap);
-                    }
-                });
-
-            } catch (Exception e) {
-                Log.e(TAG, "Error fetching image: ", e);
+            } else {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to fetch data", Toast.LENGTH_SHORT).show());
             }
-        }
+        });
+    }
 
-        private JSONObject fetchCatImageJson() throws Exception {
-            URL url = new URL("https://cataas.com/cat?json=true");
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            InputStream inputStream = connection.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder jsonBuilder = new StringBuilder();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                jsonBuilder.append(line);
+    private JSONObject fetchJsonData() {
+        String urlString = "https://swapi.dev/api/people/?format=json";
+        try {
+            URL apiUrl = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
+            connection.setRequestMethod("GET");
+            InputStreamReader reader = new InputStreamReader(connection.getInputStream());
+            StringBuilder response = new StringBuilder();
+            int data = reader.read();
+            while (data != -1) {
+                response.append((char) data);
+                data = reader.read();
             }
-
-            return new JSONObject(jsonBuilder.toString());
+            reader.close();
+            return new JSONObject(response.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching data", e);
         }
+        return null;
+    }
+
+    private void populateListView(JSONArray characters) {
+        StarWarsAdapter adapter = new StarWarsAdapter(this, characters);
+        listView.setAdapter(adapter);
     }
 }

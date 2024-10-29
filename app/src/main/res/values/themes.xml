@@ -1,13 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base application theme without ActionBar -->
-    <style name="Base.Theme.AndroidLabs" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your theme here -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorOnPrimary">@color/white</item>
-    </style>
-
-    <!-- Application theme inheriting from Base -->
-    <style name="Theme.AndroidLabs" parent="Base.Theme.AndroidLabs" />
+    <color name="teal_700">#00897B</color>
+    <color name="white">#FFFFFF</color>
+    <!-- Add other colors as needed -->
 </resources>
