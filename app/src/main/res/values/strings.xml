@@ -1,6 +1,9 @@
-<resources>
-    <string name="app_name">LAB 7 </string>
-    <string name="label_name" translatable="false">Name:</string>
-    <string name="label_height" translatable="false">Height:</string>
-    <string name="label_mass" translatable="false">Mass:</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="action_favorite" tools:ignore="MissingTranslation">Favorite</string>
+    <string name="action_share" tools:ignore="MissingTranslation">Share</string>
+<string name="app_name">Android Labs</string>
+<string name="title_activity_dad_joke" tools:ignore="MissingTranslation">Dad Joke Activity</string> <!-- Add this line -->
+<!-- Other strings can be added here -->
+    <string name="home_screen_text">Welcome to the Home Screen</string>
+
 </resources>

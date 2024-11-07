@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="teal_700">#00897B</color>
-    <color name="white">#FFFFFF</color>
-    <!-- Add other colors as needed -->
+
+    <!-- Define a custom theme without the action bar -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Disable the Action Bar -->
+        <item name="windowActionBar">false</item>
+        <!-- Optionally, remove window title -->
+        <item name="windowNoTitle">true</item>
+    </style>
+
 </resources>

@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
     <!-- Main content layout -->
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
         <!-- Toolbar -->
         <androidx.appcompat.widget.Toolbar
@@ -18,24 +18,23 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
-            app:title="Home" />
+            app:title="Dad Joke" />
 
-        <!-- Home Screen Text -->
+        <!-- Joke TextView -->
         <TextView
-            android:id="@+id/home_text"
+            android:id="@+id/joke_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home_screen_text"
+            android:text="Here's a hilarious dad joke!"
+            android:padding="16dp"
             android:textSize="18sp"
-            android:layout_below="@id/toolbar"
-            android:padding="16dp" />
-    </RelativeLayout>
+            tools:ignore="HardcodedText" />
+    </LinearLayout>
 
     <!-- Navigation Drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_gravity="start"
-        app:menu="@menu/drawer_menu" />
+        android:layout_gravity="start" />
 </androidx.drawerlayout.widget.DrawerLayout>

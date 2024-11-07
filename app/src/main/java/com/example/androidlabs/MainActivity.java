@@ -2,116 +2,77 @@ package com.example.androidlabs;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.ListView;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentManager;
+import androidx.appcompat.widget.Toolbar;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.android.material.navigation.NavigationView;
 
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-public class MainActivity extends AppCompatActivity {
-
-    private static final String TAG = "MainActivity";
-    private ListView listView;
-    private JSONArray characters;
-    private boolean isTablet;
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Check if we're using the tablet layout (presence of frameLayout)
-        isTablet = findViewById(R.id.frameLayout) != null;
-
         setContentView(R.layout.activity_main);
-        listView = findViewById(R.id.listView);
-        fetchData();
 
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            try {
-                JSONObject character = characters.getJSONObject(position);
-                String name = character.getString("name");
-                String height = character.getString("height");
-                String mass = character.getString("mass");
+        // Set up the Toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-                if (isTablet) { // Tablet mode
-                    // Use FragmentManager to display DetailsFragment in the frameLayout on tablets
-                    DetailsFragment fragment = new DetailsFragment();
-                    Bundle bundle = new Bundle();
-                    bundle.putString("name", name);
-                    bundle.putString("height", height);
-                    bundle.putString("mass", mass);
-                    fragment.setArguments(bundle);
-
-                    FragmentManager fragmentManager = getSupportFragmentManager();
-                    fragmentManager.beginTransaction()
-                            .replace(R.id.frameLayout, fragment)
-                            .commit();
-                } else { // Phone mode
-                    // Start DetailsActivity to show the details on phones
-                    Intent intent = new Intent(MainActivity.this, DetailsActivity.class);
-                    intent.putExtra("name", name);
-                    intent.putExtra("height", height);
-                    intent.putExtra("mass", mass);
-                    startActivity(intent);
-                }
-            } catch (JSONException e) {
-                Log.e(TAG, "Error selecting character", e);
-                Toast.makeText(MainActivity.this, "Error selecting character", Toast.LENGTH_SHORT).show();
-            }
-        });
+        // Set up the Navigation Drawer
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
     }
 
-    private void fetchData() {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
-            JSONObject jsonResponse = fetchJsonData();
-            if (jsonResponse != null) {
-                try {
-                    characters = jsonResponse.getJSONArray("results");
-                    runOnUiThread(() -> populateListView(characters));
-                } catch (JSONException e) {
-                    Log.e(TAG, "JSON Parsing error", e);
-                }
-            } else {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Failed to fetch data", Toast.LENGTH_SHORT).show());
-            }
-        });
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the toolbar_menu.xml
+        getMenuInflater().inflate(R.menu.toolbar_menu, menu);
+        return true;
     }
 
-    private JSONObject fetchJsonData() {
-        String urlString = "https://swapi.dev/api/people/?format=json";
-        try {
-            URL apiUrl = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
-            connection.setRequestMethod("GET");
-            InputStreamReader reader = new InputStreamReader(connection.getInputStream());
-            StringBuilder response = new StringBuilder();
-            int data = reader.read();
-            while (data != -1) {
-                response.append((char) data);
-                data = reader.read();
-            }
-            reader.close();
-            return new JSONObject(response.toString());
-        } catch (Exception e) {
-            Log.e(TAG, "Error fetching data", e);
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        // Handle menu item clicks using if-else statements
+        int itemId = item.getItemId();
+        if (itemId == R.id.item1) {
+            Toast.makeText(this, "You clicked on item 1", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (itemId == R.id.item2) {
+            Toast.makeText(this, "You clicked on item 2", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (itemId == R.id.overflow_item) {
+            // Handle overflow item click
+            Toast.makeText(this, "Overflow item clicked", Toast.LENGTH_SHORT).show();
+            return true;
+        } else {
+            return super.onOptionsItemSelected(item);
         }
-        return null;
     }
 
-    private void populateListView(JSONArray characters) {
-        StarWarsAdapter adapter = new StarWarsAdapter(this, characters);
-        listView.setAdapter(adapter);
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        // Handle navigation item clicks using if-else statements
+        int id = item.getItemId();
+        if (id == R.id.nav_home) {
+            // If Home is selected, just show the home content
+            Toast.makeText(this, "Home selected", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (id == R.id.nav_dad_joke) {
+            // Launch Dad Joke activity when selected
+            Intent intent = new Intent(this, DadJoke.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.nav_exit) {
+            // Exit the app when Exit is selected
+            finishAffinity();
+            return true;
+        } else {
+            return false;
+        }
     }
 }
